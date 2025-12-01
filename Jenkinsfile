@@ -1,8 +1,8 @@
 pipeline {
     agent any
-     triggers {
-            githubPush()
-        }
+    triggers {
+        githubPush()
+    }
     
     tools {
         maven 'maven'
@@ -33,7 +33,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Construction de l\'image Docker...'
-                sh 'docker build -t student-management:latest .'
+                sh '/usr/local/bin/docker build -t student-management:latest .'
             }
         }
 
@@ -41,9 +41,9 @@ pipeline {
             steps {
                 echo 'Déploiement du conteneur...'
                 sh '''
-                    docker stop student-app || true
-                    docker rm student-app || true
-                    docker run -d \
+                    /usr/local/bin/docker stop student-app || true
+                    /usr/local/bin/docker rm student-app || true
+                    /usr/local/bin/docker run -d \
                       --name student-app \
                       -p 8090:8090 \
                       student-management:latest
