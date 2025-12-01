@@ -12,7 +12,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Récupération du code depuis GitHub...'
-                git branch: 'main', url: 'https://github.com/benghorbelmenyar/DevopsTest.git'
+                git branch: 'main', url: 'https://github.com/benghorbelmenyar/StudentsManagement-DevOps.git'
             }
         }
 
