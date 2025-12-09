@@ -1,13 +1,22 @@
 pipeline {
     agent any
+
+    // Trigger GitHub push
     triggers {
         githubPush()
     }
-    
+
+    // Outils nécessaires
     tools {
         maven 'maven'
     }
-    
+
+    // Variables d'environnement globales
+    environment {
+        // Ajouter Docker et ses helpers au PATH
+        PATH = "/usr/local/bin:${env.PATH}"
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -33,7 +42,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Construction de l\'image Docker...'
-                sh '/usr/local/bin/docker build -t student-management:latest .'
+                sh 'docker build -t student-management:latest .'
             }
         }
 
@@ -41,9 +50,9 @@ pipeline {
             steps {
                 echo 'Déploiement du conteneur...'
                 sh '''
-                    /usr/local/bin/docker stop student-app || true
-                    /usr/local/bin/docker rm student-app || true
-                    /usr/local/bin/docker run -d \
+                    docker stop student-app || true
+                    docker rm student-app || true
+                    docker run -d \
                       --name student-app \
                       -p 8090:8090 \
                       student-management:latest
