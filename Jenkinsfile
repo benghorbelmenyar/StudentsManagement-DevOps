@@ -17,7 +17,6 @@ pipeline {
         IMAGE_TAG = "${BUILD_NUMBER}"
 
         K8S_NAMESPACE = 'devops'
-        KUBECONFIG = "${WORKSPACE}/.kube/config"
     }
 
     stages {
@@ -43,7 +42,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh """
-                    docker build -t ${DOCKERHUB_REPO}:${IMAGE_TAG} .
+                    echo "=== Listing target directory ==="
+                    ls -la target/
+                    echo "=== Building Docker image ==="
+                    docker build --no-cache -t ${DOCKERHUB_REPO}:${IMAGE_TAG} .
                     docker tag ${DOCKERHUB_REPO}:${IMAGE_TAG} ${DOCKERHUB_REPO}:latest
                 """
             }
@@ -63,11 +65,18 @@ pipeline {
         stage('Setup Kubernetes Config') {
             steps {
                 sh '''
-                    mkdir -p ${WORKSPACE}/.kube
-                    minikube kubectl -- config view --flatten > ${WORKSPACE}/.kube/config
-                    export KUBECONFIG=${WORKSPACE}/.kube/config
+                    # Vérifier que Minikube est démarré
+                    minikube status || minikube start
+                    
+                    # Configurer kubectl pour utiliser Minikube
+                    minikube update-context
+                    
+                    # Utiliser le contexte minikube directement
+                    kubectl config use-context minikube
+                    
+                    # Vérifier la connexion
                     kubectl cluster-info
-                    kubectl version --client
+                    kubectl get nodes
                 '''
             }
         }
@@ -75,7 +84,6 @@ pipeline {
         stage('Create Namespace') {
             steps {
                 sh '''
-                    export KUBECONFIG=${WORKSPACE}/.kube/config
                     kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                     kubectl get namespace ${K8S_NAMESPACE}
                 '''
@@ -85,7 +93,6 @@ pipeline {
         stage('Deploy MySQL to Kubernetes') {
             steps {
                 sh """
-                    export KUBECONFIG=${WORKSPACE}/.kube/config
                     kubectl apply -f k8s/mysql-deployment.yaml -n ${K8S_NAMESPACE}
 
                     kubectl wait --for=condition=ready pod -l app=mysql -n ${K8S_NAMESPACE} --timeout=300s || {
@@ -100,8 +107,6 @@ pipeline {
         stage('Deploy App to Kubernetes') {
             steps {
                 sh """
-                    export KUBECONFIG=${WORKSPACE}/.kube/config
-
                     kubectl apply -f k8s/spring-deployment.yaml -n ${K8S_NAMESPACE}
 
                     kubectl set image deployment/student-management \
@@ -116,7 +121,6 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh """
-                    export KUBECONFIG=${WORKSPACE}/.kube/config
                     kubectl get pods -n ${K8S_NAMESPACE} -o wide
                     kubectl get svc -n ${K8S_NAMESPACE}
                     kubectl get deployments -n ${K8S_NAMESPACE}
@@ -128,9 +132,10 @@ pipeline {
         stage('Get Service URL') {
             steps {
                 sh """
-                    export KUBECONFIG=${WORKSPACE}/.kube/config
                     MINIKUBE_IP=\$(minikube ip)
+                    echo "==============================================="
                     echo "Application URL: http://\${MINIKUBE_IP}:30080"
+                    echo "==============================================="
                 """
             }
         }
