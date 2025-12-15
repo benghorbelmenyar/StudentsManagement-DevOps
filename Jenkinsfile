@@ -136,26 +136,27 @@ pipeline {
                 sh """
                     export KUBECONFIG=${WORKSPACE}/.kube/config
                     MINIKUBE_IP=\$(minikube ip)
-                    echo "http://\${MINIKUBE_IP}:30080"
+                    echo "Application URL: http://\${MINIKUBE_IP}:30080"
                 """
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                sh 'docker system prune -f || true'
             }
         }
     }
 
     post {
         success {
-            echo "Image: ${DOCKERHUB_REPO}:${IMAGE_TAG}"
-            echo "Namespace: ${K8S_NAMESPACE}"
+            echo "✅ Pipeline completed successfully!"
+            echo "Docker Image: ${DOCKERHUB_REPO}:${IMAGE_TAG}"
+            echo "Kubernetes Namespace: ${K8S_NAMESPACE}"
         }
 
         failure {
-            echo "Pipeline failed"
-        }
-
-        always {
-            sh '''
-                docker system prune -f || true
-            '''
+            echo "❌ Pipeline failed! Check the logs above for details."
         }
     }
 }
